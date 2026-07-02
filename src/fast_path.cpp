@@ -1,4 +1,5 @@
 #include "fast_path.h"
+#include "inference_engine.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -11,11 +12,13 @@ namespace DPI {
 
 FastPathProcessor::FastPathProcessor(int fp_id,
                                      RuleManager* rule_manager,
+                                     InferenceEngine* inference_engine,
                                      PacketOutputCallback output_callback)
     : fp_id_(fp_id),
       input_queue_(10000),
       conn_tracker_(fp_id),
       rule_manager_(rule_manager),
+      inference_engine_(inference_engine),
       output_callback_(std::move(output_callback)) {
 }
 
@@ -96,6 +99,40 @@ PacketAction FastPathProcessor::processPacket(PacketJob& job) {
     // If connection is already blocked, drop immediately
     if (conn->state == ConnectionState::BLOCKED) {
         return PacketAction::DROP;
+    }
+    
+    // Run real-time machine learning intrusion detection
+    uint64_t total_pkts = conn->fwd_packets + conn->bwd_packets;
+    if (inference_engine_ && conn->state != ConnectionState::BLOCKED && total_pkts >= 3) {
+        float flow_duration = static_cast<float>(conn->last_seen_us - conn->first_seen_us);
+        float fwd_pkts = static_cast<float>(conn->fwd_packets);
+        float bwd_pkts = static_cast<float>(conn->bwd_packets);
+        float size_var = static_cast<float>(conn->m2_packet_size / (total_pkts - 1));
+        float iat_mean = static_cast<float>(flow_duration / (total_pkts - 1));
+        
+        std::vector<float> features = {flow_duration, fwd_pkts, bwd_pkts, size_var, iat_mean};
+        
+        try {
+            int is_anomaly = inference_engine_->predict(features);
+            if (is_anomaly == 1) {
+                std::cout << "[FP" << fp_id_ << " ML-ALERT] Malicious Flow Detected! "
+                          << conn->tuple.toString() 
+                          << " | Duration: " << flow_duration << "us"
+                          << " | Fwd: " << fwd_pkts << " | Bwd: " << bwd_pkts
+                          << " | Var: " << size_var << " | IAT: " << iat_mean << "us" 
+                          << std::endl;
+                
+                conn_tracker_.blockConnection(conn);
+                return PacketAction::DROP;
+            }
+        } catch (const std::exception& e) {
+            static bool warning_logged = false;
+            if (!warning_logged) {
+                std::cerr << "[FP" << fp_id_ << " ML-WARNING] Inference error: " << e.what() 
+                          << " (Fail-safe forward active)" << std::endl;
+                warning_logged = true;
+            }
+        }
     }
     
     // If connection not yet classified, try to inspect payload
@@ -293,11 +330,12 @@ FastPathProcessor::FPStats FastPathProcessor::getStats() const {
 
 FPManager::FPManager(int num_fps,
                      RuleManager* rule_manager,
+                     InferenceEngine* inference_engine,
                      PacketOutputCallback output_callback) {
     
     // Create FP processors (each has its own input queue)
     for (int i = 0; i < num_fps; i++) {
-        auto fp = std::make_unique<FastPathProcessor>(i, rule_manager, output_callback);
+        auto fp = std::make_unique<FastPathProcessor>(i, rule_manager, inference_engine, output_callback);
         fps_.push_back(std::move(fp));
     }
     

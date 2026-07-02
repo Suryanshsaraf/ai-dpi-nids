@@ -24,6 +24,7 @@ Options:
   --block-app <app>      Block application (e.g., YouTube, Facebook)
   --block-domain <dom>   Block domain (supports wildcards: *.facebook.com)
   --rules <file>         Load blocking rules from file
+  --model <file>         Load custom ONNX NIDS model (default: model/nids_model.onnx)
   --lbs <n>              Number of load balancer threads (default: 2)
   --fps <n>              FP threads per LB (default: 2)
   --verbose              Enable verbose output
@@ -94,7 +95,9 @@ int main(int argc, char* argv[]) {
     for (int i = 3; i < argc; i++) {
         std::string arg = argv[i];
         
-        if (arg == "--block-ip" && i + 1 < argc) {
+        if (arg == "--model" && i + 1 < argc) {
+            config.model_file = argv[++i];
+        } else if (arg == "--block-ip" && i + 1 < argc) {
             block_ips.push_back(argv[++i]);
         } else if (arg == "--block-app" && i + 1 < argc) {
             block_apps.push_back(argv[++i]);

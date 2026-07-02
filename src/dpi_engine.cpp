@@ -44,9 +44,18 @@ bool DPIEngine::initialize() {
         handleOutput(job, action);
     };
     
+    // Initialize ML Inference Engine
+    try {
+        inference_engine_ = std::make_unique<InferenceEngine>(config_.model_file);
+    } catch (const std::exception& e) {
+        std::cerr << "[DPIEngine WARNING] Failed to load ONNX model: " << e.what() 
+                  << " (ML flow analysis will be disabled - Fail-safe pass active)" << std::endl;
+        inference_engine_ = nullptr;
+    }
+    
     // Create FP manager (creates FP threads and their queues)
     int total_fps = config_.num_load_balancers * config_.fps_per_lb;
-    fp_manager_ = std::make_unique<FPManager>(total_fps, rule_manager_.get(), output_cb);
+    fp_manager_ = std::make_unique<FPManager>(total_fps, rule_manager_.get(), inference_engine_.get(), output_cb);
     
     // Create LB manager (creates LB threads, connects to FP queues)
     lb_manager_ = std::make_unique<LBManager>(

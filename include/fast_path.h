@@ -13,6 +13,8 @@
 
 namespace DPI {
 
+class InferenceEngine;
+
 // ============================================================================
 // Fast Path Processor Thread
 // ============================================================================
@@ -37,9 +39,11 @@ public:
     // Constructor
     // fp_id: ID of this FP (0, 1, 2, ...)
     // rule_manager: Shared rule manager (read-only from FP perspective)
+    // inference_engine: Shared ML inference engine
     // output_callback: Called when packet should be forwarded
     FastPathProcessor(int fp_id,
                       RuleManager* rule_manager,
+                      InferenceEngine* inference_engine,
                       PacketOutputCallback output_callback);
     
     ~FastPathProcessor();
@@ -86,6 +90,9 @@ private:
     // Rule manager (shared, read-only)
     RuleManager* rule_manager_;
     
+    // ML Inference Engine (shared, read-only)
+    InferenceEngine* inference_engine_;
+    
     // Output callback
     PacketOutputCallback output_callback_;
     
@@ -130,9 +137,11 @@ public:
     // Create FP manager
     // num_fps: Number of FP threads
     // rule_manager: Shared rule manager
+    // inference_engine: Shared ML inference engine
     // output_callback: Shared output callback
     FPManager(int num_fps,
               RuleManager* rule_manager,
+              InferenceEngine* inference_engine,
               PacketOutputCallback output_callback);
     
     ~FPManager();

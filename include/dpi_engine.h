@@ -8,6 +8,7 @@
 #include "fast_path.h"
 #include "rule_manager.h"
 #include "connection_tracker.h"
+#include "inference_engine.h"
 #include <memory>
 #include <thread>
 #include <atomic>
@@ -58,6 +59,7 @@ public:
         int fps_per_lb = 2;
         size_t queue_size = 10000;
         std::string rules_file;
+        std::string model_file = "model/nids_model.onnx";
         bool verbose = false;
     };
     
@@ -136,6 +138,7 @@ private:
     // Shared components
     std::unique_ptr<RuleManager> rule_manager_;
     std::unique_ptr<GlobalConnectionTable> global_conn_table_;
+    std::unique_ptr<InferenceEngine> inference_engine_;
     
     // Thread pools
     std::unique_ptr<FPManager> fp_manager_;
