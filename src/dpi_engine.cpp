@@ -461,6 +461,11 @@ std::string DPIEngine::generateReport() const {
         ss << "║   FP Forwarded:       " << std::setw(12) << fp_stats.total_forwarded << "                        ║\n";
         ss << "║   FP Dropped:         " << std::setw(12) << fp_stats.total_dropped << "                        ║\n";
         ss << "║   Active Connections: " << std::setw(12) << fp_stats.total_connections << "                        ║\n";
+        if (fp_stats.total_inference_count > 0) {
+            double avg_latency = static_cast<double>(fp_stats.total_inference_time_us) / fp_stats.total_inference_count;
+            ss << "║   ML Inferences:      " << std::setw(12) << fp_stats.total_inference_count << "                        ║\n";
+            ss << "║   Avg ML Latency:     " << std::setw(9) << std::fixed << std::setprecision(2) << avg_latency << " us                     ║\n";
+        }
     }
     
     if (rule_manager_) {

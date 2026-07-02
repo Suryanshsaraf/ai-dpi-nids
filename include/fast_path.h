@@ -68,6 +68,8 @@ public:
         uint64_t connections_tracked;
         uint64_t sni_extractions;
         uint64_t classification_hits;
+        uint64_t inference_count;
+        uint64_t inference_time_us;
     };
     
     FPStats getStats() const;
@@ -102,6 +104,8 @@ private:
     std::atomic<uint64_t> packets_dropped_{0};
     std::atomic<uint64_t> sni_extractions_{0};
     std::atomic<uint64_t> classification_hits_{0};
+    std::atomic<uint64_t> inference_count_{0};
+    std::atomic<uint64_t> inference_time_us_{0};
     
     // Thread control
     std::atomic<bool> running_{false};
@@ -176,6 +180,8 @@ public:
         uint64_t total_forwarded;
         uint64_t total_dropped;
         uint64_t total_connections;
+        uint64_t total_inference_count;
+        uint64_t total_inference_time_us;
     };
     
     AggregatedStats getAggregatedStats() const;

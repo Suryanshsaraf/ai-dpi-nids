@@ -113,7 +113,14 @@ PacketAction FastPathProcessor::processPacket(PacketJob& job) {
         std::vector<float> features = {flow_duration, fwd_pkts, bwd_pkts, size_var, iat_mean};
         
         try {
+            auto start_time = std::chrono::high_resolution_clock::now();
             int is_anomaly = inference_engine_->predict(features);
+            auto end_time = std::chrono::high_resolution_clock::now();
+            
+            uint64_t elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+            inference_count_++;
+            inference_time_us_ += elapsed_us;
+            
             if (is_anomaly == 1) {
                 std::cout << "[FP" << fp_id_ << " ML-ALERT] Malicious Flow Detected! "
                           << conn->tuple.toString() 
@@ -321,6 +328,8 @@ FastPathProcessor::FPStats FastPathProcessor::getStats() const {
     stats.connections_tracked = conn_tracker_.getActiveCount();
     stats.sni_extractions = sni_extractions_.load();
     stats.classification_hits = classification_hits_.load();
+    stats.inference_count = inference_count_.load();
+    stats.inference_time_us = inference_time_us_.load();
     return stats;
 }
 
@@ -360,7 +369,7 @@ void FPManager::stopAll() {
 }
 
 FPManager::AggregatedStats FPManager::getAggregatedStats() const {
-    AggregatedStats stats = {0, 0, 0, 0};
+    AggregatedStats stats = {0, 0, 0, 0, 0, 0};
     
     for (const auto& fp : fps_) {
         auto fp_stats = fp->getStats();
@@ -368,6 +377,8 @@ FPManager::AggregatedStats FPManager::getAggregatedStats() const {
         stats.total_forwarded += fp_stats.packets_forwarded;
         stats.total_dropped += fp_stats.packets_dropped;
         stats.total_connections += fp_stats.connections_tracked;
+        stats.total_inference_count += fp_stats.inference_count;
+        stats.total_inference_time_us += fp_stats.inference_time_us;
     }
     
     return stats;
