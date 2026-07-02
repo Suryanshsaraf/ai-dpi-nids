@@ -85,8 +85,8 @@ PacketAction FastPathProcessor::processPacket(PacketJob& job) {
     }
     
     // Update connection stats
-    bool is_outbound = true;  // In this model, all packets from user are outbound
-    conn_tracker_.updateConnection(conn, job.data.size(), is_outbound);
+    bool is_outbound = (job.tuple == conn->tuple);
+    conn_tracker_.updateConnection(conn, job.data.size(), is_outbound, job.ts_sec, job.ts_usec);
     
     // Update TCP state if applicable
     if (job.tuple.protocol == 6) {  // TCP

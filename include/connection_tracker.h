@@ -36,7 +36,7 @@ public:
     Connection* getConnection(const FiveTuple& tuple);
     
     // Update connection with new packet
-    void updateConnection(Connection* conn, size_t packet_size, bool is_outbound);
+    void updateConnection(Connection* conn, size_t packet_size, bool is_outbound, uint32_t ts_sec, uint32_t ts_usec);
     
     // Mark connection as classified
     void classifyConnection(Connection* conn, AppType app, const std::string& sni);

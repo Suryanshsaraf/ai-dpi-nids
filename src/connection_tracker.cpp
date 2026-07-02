@@ -21,6 +21,12 @@ Connection* ConnectionTracker::getOrCreateConnection(const FiveTuple& tuple) {
         return &it->second;
     }
     
+    // Check reverse tuple for bidirectional flow tracking
+    auto rev = connections_.find(tuple.reverse());
+    if (rev != connections_.end()) {
+        return &rev->second;
+    }
+    
     // Check if we need to evict old connections
     if (connections_.size() >= max_connections_) {
         evictOldest();
@@ -54,18 +60,34 @@ Connection* ConnectionTracker::getConnection(const FiveTuple& tuple) {
     return nullptr;
 }
 
-void ConnectionTracker::updateConnection(Connection* conn, size_t packet_size, bool is_outbound) {
+void ConnectionTracker::updateConnection(Connection* conn, size_t packet_size, bool is_outbound, uint32_t ts_sec, uint32_t ts_usec) {
     if (!conn) return;
     
     conn->last_seen = std::chrono::steady_clock::now();
     
+    uint64_t ts_us = static_cast<uint64_t>(ts_sec) * 1000000ULL + ts_usec;
+    if (conn->first_seen_us == 0) {
+        conn->first_seen_us = ts_us;
+    }
+    conn->last_seen_us = ts_us;
+    
     if (is_outbound) {
+        conn->fwd_packets++;
         conn->packets_out++;
         conn->bytes_out += packet_size;
     } else {
+        conn->bwd_packets++;
         conn->packets_in++;
         conn->bytes_in += packet_size;
     }
+    
+    // Welford's algorithm for rolling variance of packet sizes
+    uint64_t total_pkts = conn->fwd_packets + conn->bwd_packets;
+    double x = static_cast<double>(packet_size);
+    double delta = x - conn->mean_packet_size;
+    conn->mean_packet_size += delta / total_pkts;
+    double delta2 = x - conn->mean_packet_size;
+    conn->m2_packet_size += delta * delta2;
 }
 
 void ConnectionTracker::classifyConnection(Connection* conn, AppType app, const std::string& sni) {

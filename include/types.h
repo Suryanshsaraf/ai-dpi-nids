@@ -130,6 +130,14 @@ struct Connection {
     bool syn_seen = false;
     bool syn_ack_seen = false;
     bool fin_seen = false;
+
+    // ML Feature fields
+    uint64_t first_seen_us = 0;
+    uint64_t last_seen_us = 0;
+    uint64_t fwd_packets = 0;
+    uint64_t bwd_packets = 0;
+    double mean_packet_size = 0.0;
+    double m2_packet_size = 0.0;
 };
 
 // ============================================================================
