@@ -83,6 +83,9 @@ void DPIEngine::start() {
     // Start output thread
     output_thread_ = std::thread(&DPIEngine::outputThreadFunc, this);
     
+    // Start telemetry thread
+    telemetry_thread_ = std::thread(&DPIEngine::telemetryThreadFunc, this);
+    
     // Start FP threads
     fp_manager_->startAll();
     
@@ -111,6 +114,11 @@ void DPIEngine::stop() {
     output_queue_.shutdown();
     if (output_thread_.joinable()) {
         output_thread_.join();
+    }
+    
+    // Stop telemetry thread
+    if (telemetry_thread_.joinable()) {
+        telemetry_thread_.join();
     }
     
     std::cout << "[DPIEngine] All threads stopped\n";
@@ -482,14 +490,22 @@ const DPIStats& DPIEngine::getStats() const {
 }
 
 void DPIEngine::printStatus() const {
-    std::cout << "\n--- Live Status ---\n";
+    std::cout << "\n--- Live Telemetry Log ---" << std::endl;
     std::cout << "Packets: " << stats_.total_packets.load()
               << " | Forwarded: " << stats_.forwarded_packets.load()
-              << " | Dropped: " << stats_.dropped_packets.load() << "\n";
+              << " | Dropped: " << stats_.dropped_packets.load() << std::endl;
     
     if (fp_manager_) {
         auto fp_stats = fp_manager_->getAggregatedStats();
-        std::cout << "Connections: " << fp_stats.total_connections << "\n";
+        std::cout << "Connections: " << fp_stats.total_connections << std::endl;
+    }
+}
+
+void DPIEngine::telemetryThreadFunc() {
+    while (running_) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (!running_) break;
+        printStatus();
     }
 }
 

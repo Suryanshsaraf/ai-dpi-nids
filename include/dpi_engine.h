@@ -160,8 +160,12 @@ private:
     // Reader thread (separate for PCAP input)
     std::thread reader_thread_;
     
+    // Telemetry thread
+    std::thread telemetry_thread_;
+    
     // Output handling
     void outputThreadFunc();
+    void telemetryThreadFunc();
     void handleOutput(const PacketJob& job, PacketAction action);
     
     // Write PCAP header to output file
