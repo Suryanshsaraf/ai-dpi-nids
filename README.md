@@ -46,7 +46,7 @@ User Traffic (PCAP) → [DPI Engine] → Filtered Traffic (PCAP)
 
 ### The Network Stack (Layers)
 
-When you visit a website, data travels through multiple "layers":
+When you visit a particular website, data travels through multiple "layers":
 
 ```
 ┌─────────────────────────────────────────────────────────┐
